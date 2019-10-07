@@ -156,7 +156,7 @@ export class OpenSheetMusicDisplay {
         this.drawer.clear(); // clear canvas before setting width
 
         // Set page width
-        const width: number = this.container.offsetWidth;
+        const width: number = 3000; // DEBUG: make width wide enough to display huge one-line scores without line breaks
         this.sheet.pageWidth = width / this.zoom / 10.0;
         // Before introducing the following optimization (maybe irrelevant), tests
         // have to be modified to ensure that width is > 0 when executed

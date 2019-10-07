@@ -119,7 +119,7 @@ export class MusicSystemBuilder {
             }
             const totalMeasureWidth: number = currentMeasureBeginInstructionsWidth + currentMeasureEndInstructionsWidth + currentMeasureVarWidth;
             const measureFitsInSystem: boolean = this.currentSystemParams.currentWidth + totalMeasureWidth + nextMeasureBeginInstructionWidth < systemMaxWidth;
-            if (isSystemStartMeasure || measureFitsInSystem) {
+            if (isSystemStartMeasure || measureFitsInSystem || true) { // don't line break. DEBUG (|| true): never line berak
                 this.addMeasureToSystem(
                     graphicalMeasures, measureStartLine, measureEndLine, totalMeasureWidth,
                     currentMeasureBeginInstructionsWidth, currentMeasureVarWidth, currentMeasureEndInstructionsWidth
