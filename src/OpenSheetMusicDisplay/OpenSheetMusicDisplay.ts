@@ -159,7 +159,8 @@ export class OpenSheetMusicDisplay {
         //const width: number = this.container.offsetWidth;
         const width: number = 600 * this.sheet.SourceMeasures.length;
         // DEBUG: one line scores, make width wide enough to prevent line breaks
-        // to set container size correctly, set width directly in the width, render, then set the width to the newWidth calculated below and rerender
+        // to set container size correctly, instead of setting width like this here, set width directly in the div, call render,
+        // then set the div's width to the newWidth calculated below and call render again.
 
         this.sheet.pageWidth = width / this.zoom / 10.0;
         // Before introducing the following optimization (maybe irrelevant), tests
