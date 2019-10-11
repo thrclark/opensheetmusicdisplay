@@ -640,25 +640,52 @@ export class VexFlowMeasure extends GraphicalMeasure {
      * @param beamedNotes notes that will not be autobeamed (usually because they are already beamed)
      */
     private autoBeamNotes(beamedNotes: StemmableNote[]): void {
-        const notesToAutoBeam: StemmableNote[] = [];
+        let notesToAutoBeam: StemmableNote[] = [];
         let consecutiveBeamableNotes: StemmableNote[] = [];
         let currentTuplet: Tuplet;
         let tupletNotesToAutoBeam: StaveNote[] = [];
         this.autoTupletVfBeams = [];
+        const separateAutoBeams: StemmableNote[][] = []; // a set of separate beams, each having a set of notes (StemmableNote[]).
+        this.autoVfBeams = []; // final Vex.Flow.Beams will be pushed/collected into this
+        let timeSignature: Fraction = this.parentSourceMeasure.ActiveTimeSignature;
+        if (timeSignature === undefined) { // this doesn't happen in OSMD, but maybe in a SourceGenerator
+            timeSignature = this.parentSourceMeasure.Duration; // suboptimal, can be 1/1 in a 4/4 time signature
+        }
+        /*if (this.parentSourceMeasure.FirstInstructionsStaffEntries[0]) {
+            for (const instruction of this.parentSourceMeasure.FirstInstructionsStaffEntries[0].Instructions) {
+                if (instruction instanceof RhythmInstruction) { // there is not always a RhythmInstruction, but this could be useful some time.
+                    timeSignature = (instruction as RhythmInstruction).Rhythm;
+                }
+            }
+        }*/
+
         for (const staffEntry of this.staffEntries) {
             for (const gve of staffEntry.graphicalVoiceEntries) {
                 const vfStaveNote: StaveNote = <StaveNote> (gve as VexFlowVoiceEntry).vfStaveNote;
-                if (gve.parentVoiceEntry.IsGrace || // don't beam grace notes
-                    gve.notes[0].graphicalNoteLength.CompareTo(new Fraction(1, 4)) === 1 || // don't beam quarter or longer notes
-                    beamedNotes.contains(vfStaveNote)) { // don't beam already beamed notes
-                    if (consecutiveBeamableNotes.length >= 2) {
+                const gNote: GraphicalNote = gve.notes[0]; // TODO check for all notes within the graphical voice entry
+                const isOnBeat: boolean = staffEntry.relInMeasureTimestamp.isOnBeat(timeSignature);
+                const haveTwoOrMoreNotesToBeamAlready: boolean = consecutiveBeamableNotes.length >= 2;
+                //const noteIsQuarterOrLonger: boolean = gNote.sourceNote.Length.CompareTo(new Fraction(1, 4)) >= 0; // trusting Fraction class, no float check
+                const noteIsQuarterOrLonger: boolean = gNote.sourceNote.Length.RealValue - new Fraction(1, 4).RealValue > (-Fraction.FloatInaccuracyTolerance);
+                const unbeamableNote: boolean =
+                    gve.parentVoiceEntry.IsGrace || // don't beam grace notes
+                    noteIsQuarterOrLonger || // don't beam quarter or longer notes
+                    beamedNotes.contains(vfStaveNote);
+                if (unbeamableNote || isOnBeat) { // end beam
+                    if (haveTwoOrMoreNotesToBeamAlready) {
                         // if we already have at least 2 notes to beam, beam them. don't beam notes surrounded by quarter notes etc.
                         for (const note of consecutiveBeamableNotes) {
                             notesToAutoBeam.push(note); // "flush" already beamed notes
                         }
+                        separateAutoBeams.push(notesToAutoBeam.slice()); // copy array, otherwise this beam gets the next notes of next beam later
+                        notesToAutoBeam = []; // reset notesToAutoBeam, otherwise the next beam includes the previous beam's notes too
                     }
                     consecutiveBeamableNotes = []; // reset notes to beam
-                    continue;
+
+                    if (unbeamableNote) {
+                        continue;
+                    }
+                    // else, note will be pushed to consecutiveBeamableNotes after tuplet check, also for note on new beat
                 }
 
                 // create beams for tuplets separately
@@ -700,14 +727,14 @@ export class VexFlowMeasure extends GraphicalMeasure {
                         }
                     }
                     if (!tupletContainsUnbeamableNote) {
-                        tupletNotesToAutoBeam.push(<StaveNote>(gve as VexFlowVoiceEntry).vfStaveNote);
+                        tupletNotesToAutoBeam.push(vfStaveNote);
                     }
                     continue;
                 } else {
                     currentTuplet = undefined;
                 }
 
-                consecutiveBeamableNotes.push((gve as VexFlowVoiceEntry).vfStaveNote);
+                consecutiveBeamableNotes.push(vfStaveNote); // also happens on new beat
             }
         }
         if (tupletNotesToAutoBeam.length >= 2) {
@@ -717,6 +744,7 @@ export class VexFlowMeasure extends GraphicalMeasure {
             for (const note of consecutiveBeamableNotes) {
                 notesToAutoBeam.push(note);
             }
+            separateAutoBeams.push(notesToAutoBeam);
         }
 
         // create options for generateBeams
@@ -734,7 +762,12 @@ export class VexFlowMeasure extends GraphicalMeasure {
             generateBeamOptions.groups = groups;
         }
 
-        this.autoVfBeams = Vex.Flow.Beam.generateBeams(notesToAutoBeam, generateBeamOptions);
+        for (const notesForSeparateAutoBeam of separateAutoBeams) {
+            const newBeams: Vex.Flow.Beam[] = Vex.Flow.Beam.generateBeams(notesForSeparateAutoBeam, generateBeamOptions);
+            for (const beam of newBeams) {
+                this.autoVfBeams.push(beam);
+            }
+        }
     }
 
     /**
