@@ -96,7 +96,9 @@ import { OpenSheetMusicDisplay } from '../src/OpenSheetMusicDisplay/OpenSheetMus
         zoomIn = document.getElementById("zoom-in-btn");
         zoomOut = document.getElementById("zoom-out-btn");
         canvas = document.createElement("div");
-        canvas.style.overflow='auto'; // enable horizontal zoom
+        canvas.style.overflow = 'auto'; // enable horizontal scrolling
+        //canvas.style.width = 'auto';
+        //canvas.style.whiteSpace = 'nowrap';
         nextCursorBtn = document.getElementById("next-cursor-btn");
         resetCursorBtn = document.getElementById("reset-cursor-btn");
         followCursorCheckbox = document.getElementById("follow-cursor-checkbox");

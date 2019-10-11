@@ -157,7 +157,10 @@ export class OpenSheetMusicDisplay {
 
         // Set page width
         //const width: number = this.container.offsetWidth;
-        const width: number = 7000; // DEBUG: one line scores, make width wide enough to prevent line breaks (TODO: set size dynamically, big enough)
+        const width: number = 600 * this.sheet.SourceMeasures.length;
+        // DEBUG: one line scores, make width wide enough to prevent line breaks
+        // to set container size correctly, set width directly in the width, render, then set the width to the newWidth calculated below and rerender
+
         this.sheet.pageWidth = width / this.zoom / 10.0;
         // Before introducing the following optimization (maybe irrelevant), tests
         // have to be modified to ensure that width is > 0 when executed
@@ -180,6 +183,13 @@ export class OpenSheetMusicDisplay {
             // Update the cursor position
             this.cursor.update();
         }
+
+        //this.drawer.resize(this.graphic.MinAllowedSystemWidth, height); // squeeze to minimum width maybe?
+        //this.drawer.resize(this.sheet.pageWidth * this.zoom * 10, height);
+        const newWidth: number = this.graphic.MusicPages[0].PositionAndShape.Size.width * 10 * this.zoom;
+        this.sheet.pageWidth = newWidth / 10 / this.zoom;
+        console.log("newWidth: " + newWidth + "px");
+        //this.container.style.width = newWidth + "px";
     }
 
     /** States whether the render() function can be safely called. */
